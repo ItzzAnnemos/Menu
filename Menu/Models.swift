@@ -16,6 +16,30 @@ struct MenuItem: Identifiable {
     let tags: [String]
 }
 
+struct Comment: Codable, Identifiable {
+    let id: UUID
+    let text: String
+    let imageData: Data?
+
+    init(text: String, imageData: Data? = nil) {
+        self.id = UUID()
+        self.text = text
+        self.imageData = imageData
+    }
+
+    var image: UIImage? {
+        guard let data = imageData else { return nil }
+        return UIImage(data: data)
+    }
+}
+
+struct Location {
+    let name: String
+    let address: String
+    let latitude: Double
+    let longitude: Double
+}
+
 // MARK: - Data
 let drinks: [MenuItem] = [
     MenuItem(title: "Еспресо", subtitle: "Силно италијанско црно кафе", imageName: "espresso",

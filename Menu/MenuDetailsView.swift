@@ -6,29 +6,35 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct MenuDetailView: View {
     let item: MenuItem
     let accentColor: Color
-
+    
     @EnvironmentObject var appState: AppState
     @State private var newComment: String = ""
-
+    @State private var pendingImage: UIImage? = nil
+    @State private var showImagePicker = false
+    @State private var imagePickerSource: UIImagePickerController.SourceType = .photoLibrary
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-
+                
                 // Hero image
-                Image(item.imageName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 300)
-                    .clipped()
-                    .padding(.top, 20)
-
+                GeometryReader { geo in
+                    Image(item.imageName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: 300)
+                        .clipped()
+                }
+                .frame(height: 300)
+                .padding(.top, 20)
+                
                 VStack(alignment: .leading, spacing: 16) {
-
+                    
                     // Title & subtitle
                     VStack(alignment: .leading, spacing: 6) {
                         Text(item.title)
@@ -38,9 +44,9 @@ struct MenuDetailView: View {
                             .font(.system(size: 16, weight: .regular))
                             .foregroundColor(.secondary)
                     }
-
+                    
                     Divider()
-
+                    
                     // Description
                     VStack(alignment: .leading, spacing: 8) {
                         Text("За артиклот")
@@ -51,9 +57,9 @@ struct MenuDetailView: View {
                             .foregroundColor(.primary)
                             .lineSpacing(5)
                     }
-
+                    
                     Divider()
-
+                    
                     // Tags
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Категории")
@@ -61,15 +67,15 @@ struct MenuDetailView: View {
                             .foregroundColor(accentColor)
                         FlowLayout(tags: item.tags, accentColor: accentColor)
                     }
-
+                    
                     Divider()
-
-                    // Comments
+                    
+                    // Comments & Photos
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Коментари")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(accentColor)
-
+                        
                         let comments = appState.getComments(for: item)
                         if comments.isEmpty {
                             Text("Сè уште нема коментари.")
@@ -77,48 +83,99 @@ struct MenuDetailView: View {
                                 .foregroundColor(.secondary)
                                 .italic()
                         } else {
-                            ForEach(comments, id: \.self) { comment in
-                                HStack(alignment: .top, spacing: 10) {
-                                    Image(systemName: "person.circle.fill")
-                                        .font(.system(size: 28))
-                                        .foregroundColor(accentColor.opacity(0.6))
-                                    Text(comment)
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.primary)
+                            ForEach(comments) { comment in
+                                CommentBubble(comment: comment, accentColor: accentColor)
+                            }
+                        }
+                        
+                        
+                        // Input row
+                        VStack(spacing: 8) {
+                            if let pending = pendingImage {
+                                VStack(spacing: 0) {
+                                    // Image + remove button on top left
+                                    HStack(alignment: .top, spacing: 0) {
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: pending)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 60, height: 60)
+                                                .clipped()
+                                                .cornerRadius(8, corners: [.topLeft])
+                                                .padding(8)
+
+                                            Button(action: { pendingImage = nil }) {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 18))
+                                                    .foregroundColor(.white)
+                                                    .shadow(radius: 2)
+                                            }
+                                        }
+                                        Spacer()
+                                    }
+
+                                    Divider()
+
+                                    // Text input + send
+                                    HStack(spacing: 10) {
+                                        TextField("Напиши коментар...", text: $newComment)
+                                            .padding(10)
+                                            .font(.system(size: 14))
+                                            .onSubmit { submitComment() }
+
+                                        Button(action: submitComment) {
+                                            Image(systemName: "paperplane.fill")
+                                                .foregroundColor(.white)
+                                                .padding(10)
+                                                .background(accentColor)
+                                                .cornerRadius(10)
+                                        }
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
+                                }
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+
+                            } else {
+                                HStack(spacing: 10) {
+                                    Button(action: {
+                                        imagePickerSource = .camera
+                                        showImagePicker = true
+                                    }) {
+                                        Image(systemName: "camera.fill")
+                                            .foregroundColor(.white)
+                                            .padding(10)
+                                            .background(accentColor)
+                                            .cornerRadius(10)
+                                    }
+
+                                    Button(action: {
+                                        imagePickerSource = .photoLibrary
+                                        showImagePicker = true
+                                    }) {
+                                        Image(systemName: "photo.fill")
+                                            .foregroundColor(.white)
+                                            .padding(10)
+                                            .background(accentColor)
+                                            .cornerRadius(10)
+                                    }
+
+                                    TextField("Напиши коментар...", text: $newComment)
                                         .padding(10)
                                         .background(Color(.systemGray6))
                                         .cornerRadius(10)
-                                }
-                            }
-                        }
+                                        .font(.system(size: 14))
+                                        .onSubmit { submitComment() }
 
-                        // New comment input
-                        HStack(spacing: 10) {
-                            TextField("Напиши коментар...", text: $newComment)
-                                .padding(10)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(10)
-                                .font(.system(size: 14))
-                                .onSubmit {
-                                        let trimmed = newComment.trimmingCharacters(in: .whitespaces)
-                                        if !trimmed.isEmpty {
-                                            appState.addComment(trimmed, to: item)
-                                            newComment = ""
-                                        }
+                                    Button(action: submitComment) {
+                                        Image(systemName: "paperplane.fill")
+                                            .foregroundColor(.white)
+                                            .padding(10)
+                                            .background(accentColor)
+                                            .cornerRadius(10)
                                     }
-
-                            Button(action: {
-                                let trimmed = newComment.trimmingCharacters(in: .whitespaces)
-                                if !trimmed.isEmpty {
-                                    appState.addComment(trimmed, to: item)
-                                    newComment = ""
                                 }
-                            }) {
-                                Image(systemName: "paperplane.fill")
-                                    .foregroundColor(.white)
-                                    .padding(10)
-                                    .background(accentColor)
-                                    .cornerRadius(10)
                             }
                         }
                     }
@@ -129,5 +186,19 @@ struct MenuDetailView: View {
         .navigationTitle(item.title)
         .navigationBarTitleDisplayMode(.inline)
         .ignoresSafeArea(edges: .top)
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(sourceType: imagePickerSource) { image in
+                pendingImage = image
+            }
+        }
+    }
+    
+    func submitComment() {
+        let trimmed = newComment.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty || pendingImage != nil {
+            appState.addComment(text: trimmed, image: pendingImage, to: item)
+            newComment = ""
+            pendingImage = nil
+        }
     }
 }

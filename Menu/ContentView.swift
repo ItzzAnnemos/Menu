@@ -5,19 +5,27 @@ struct ContentView: View {
     var body: some View {
         TabView {
             NavigationStack {
+                HomeView()
+                    .navigationBarHidden(true)
+            }
+            .tabItem {
+                Label("Дома", systemImage: "house.fill")
+            }
+            
+            NavigationStack {
                 MenuListView(items: drinks, accentColor: .blue)
                     .navigationTitle("Пијалоци")
                     .toolbar {
                         NavigationLink(destination: RandomCocktailView()) {
                             Image(systemName: "shuffle")
-                                        .foregroundStyle(.blue)
+                                .foregroundStyle(.blue)
+                        }
                     }
-                }
             }
             .tabItem {
                 Label("Пијалоци", systemImage: "cup.and.saucer.fill")
             }
-
+            
             NavigationStack {
                 MenuListView(items: foods, accentColor: .orange)
                     .navigationTitle("Храна")
